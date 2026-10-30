@@ -147,6 +147,12 @@ and do **not** list third-party screensavers, so it must be selected once over A
 | `app/build.gradle`, `settings.gradle` | Version 2.0.0; project name Athkari. SDK levels unchanged |
 | `.github/workflows/build-apk.yml` | Same build steps; added the optional stable-signing step; artifact renamed Athkari-APK |
 
+### v2.1
+- Dhikr shown in a frosted-glass card (blurred copy of the current photo, thin light border); only the text fades.
+- Prayer times in a matching glass card: city, next prayer, time remaining, a gold progress bar from the last adhan to the next, and the six times.
+- Clock row: time | divider | Gregorian and Hijri dates.
+- 19 background photos chosen by the owner (`assets/photos.json`).
+
 ## 9. Testing checklist
 
 - [ ] App appears in the Apps row with the أذكاري banner; opens with the remote.

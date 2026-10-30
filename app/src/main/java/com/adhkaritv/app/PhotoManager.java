@@ -31,7 +31,7 @@ import java.util.concurrent.Executors;
  */
 public final class PhotoManager {
 
-    public interface Callback { void onPhoto(Bitmap bitmap); }
+    public interface Callback { void onPhoto(Bitmap bitmap, Bitmap blurred); }
 
     private static final int MAX_CACHED_FILES = 60;
 
@@ -76,7 +76,8 @@ public final class PhotoManager {
             if (bmp == null && !closed) bmp = anyCached(start);
             position = idx;
             final Bitmap result = bmp;
-            if (result != null && !closed) main.post(() -> { if (!closed) cb.onPhoto(result); });
+            final Bitmap blurred = result != null ? blur(result) : null;
+            if (result != null && !closed) main.post(() -> { if (!closed) cb.onPhoto(result, blurred); });
             if (!closed) prefetch(urls.get((idx + 1) % urls.size()));
         });
     }
@@ -155,6 +156,24 @@ public final class PhotoManager {
             d.inPreferredConfig = Bitmap.Config.ARGB_8888;
             return BitmapFactory.decodeFile(f.getPath(), d);
         } catch (OutOfMemoryError | Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * Cheap, smooth blur for the glass cards: shrink in steps to ~1/24 size, then enlarge once with
+     * bilinear filtering. The ImageView scales it up further, which keeps it soft.
+     */
+    static Bitmap blur(Bitmap src) {
+        try {
+            int w = src.getWidth(), h = src.getHeight();
+            Bitmap a = Bitmap.createScaledBitmap(src, Math.max(1, w / 6), Math.max(1, h / 6), true);
+            Bitmap b = Bitmap.createScaledBitmap(a, Math.max(1, w / 24), Math.max(1, h / 24), true);
+            Bitmap c = Bitmap.createScaledBitmap(b, Math.max(1, w / 8), Math.max(1, h / 8), true);
+            if (a != src) a.recycle();
+            b.recycle();
+            return c;
+        } catch (Throwable t) {
             return null;
         }
     }

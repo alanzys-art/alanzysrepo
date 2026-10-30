@@ -120,6 +120,17 @@ public final class PrayerCalculator {
         return new Next(FAJR, tomorrow.times[FAJR], true);
     }
 
+    /** The adhan before {@code next} (for Fajr: the previous evening's Isha). Used for the progress bar. */
+    public static ZonedDateTime previous(Next next, Method m) {
+        LocalDate d = next.time.toLocalDate();
+        if (next.prayer == FAJR) return compute(d.minusDays(1), m).times[ISHA];
+        int[] order = PRAYERS;
+        for (int i = 1; i < order.length; i++) {
+            if (order[i] == next.prayer) return compute(d, m).times[order[i - 1]];
+        }
+        return compute(d.minusDays(1), m).times[ISHA];
+    }
+
     // ---- astronomy (PrayTimes.org) ----
 
     private static double sunAngleTime(double jd, double angle, double t, boolean beforeNoon) {
