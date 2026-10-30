@@ -13,21 +13,14 @@ public final class ArabicFormat {
 
     private ArabicFormat() {}
 
-    /** Converts Western digits to Arabic-Indic digits (٠١٢٣٤٥٦٧٨٩). */
-    public static String digits(String s) {
-        StringBuilder b = new StringBuilder(s.length());
-        for (int i = 0; i < s.length(); i++) {
-            char c = s.charAt(i);
-            b.append(c >= '0' && c <= '9' ? (char) ('٠' + (c - '0')) : c);
-        }
-        return b.toString();
-    }
+    /** Numbers are shown with Western Arabic digits (0-9); names of days and months stay in Arabic. */
+    public static String digits(String s) { return s; }
 
     public static String digits(long n) { return digits(Long.toString(n)); }
 
     private static String two(long n) { return digits(n < 10 ? "0" + n : Long.toString(n)); }
 
-    /** "٥:٣٠" (12-hour, no leading zero on the hour). */
+    /** "5:30" (12-hour, no leading zero on the hour). */
     public static String clock12(ZonedDateTime t) {
         int h = t.getHour() % 12;
         if (h == 0) h = 12;
@@ -37,21 +30,21 @@ public final class ArabicFormat {
     /** "صباحًا" or "مساءً". */
     public static String dayPeriod(ZonedDateTime t) { return t.getHour() < 12 ? "صباحًا" : "مساءً"; }
 
-    /** Short form for the prayer panel: "٤:٣٩ ص". */
+    /** Short form for the prayer panel: "4:39 ص". */
     public static String shortTime(ZonedDateTime t) { return clock12(t) + " " + (t.getHour() < 12 ? "ص" : "م"); }
 
-    /** "الجمعة، ٣٠ أكتوبر ٢٠٢٦". */
+    /** "الجمعة، 30 أكتوبر 2026". */
     public static String gregorianDate(ZonedDateTime t) {
         return WEEKDAYS[t.getDayOfWeek().getValue() - 1] + "، " + digits(t.getDayOfMonth()) + " "
                 + MONTHS[t.getMonthValue() - 1] + " " + digits(t.getYear());
     }
 
-    /** "١٩ جمادى الأولى ١٤٤٨ هـ" — month is 1-based. */
+    /** "19 جمادى الأولى 1448 هـ" — month is 1-based. */
     public static String hijriDate(int day, int month, int year) {
         return digits(day) + " " + HIJRI_MONTHS[month - 1] + " " + digits(year) + " هـ";
     }
 
-    /** "٠١:٢٥:٣٠". */
+    /** "01:25:30". */
     public static String countdown(long seconds) {
         if (seconds < 0) seconds = 0;
         return two(seconds / 3600) + ":" + two((seconds / 60) % 60) + ":" + two(seconds % 60);

@@ -39,7 +39,7 @@ public final class AdhkarRepository {
             }
         } catch (Exception e) {
             // Should never happen with the bundled file; keep the screen useful anyway.
-            all.add(new Item("سُبْحَانَ اللَّهِ وَبِحَمْدِهِ", "صحيح البخاري ٦٤٠٥", "التسبيح", ANY, ""));
+            all.add(new Item("سُبْحَانَ اللَّهِ وَبِحَمْدِهِ", "صحيح البخاري 6405", "التسبيح", ANY, ""));
         }
     }
 

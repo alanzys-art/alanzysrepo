@@ -65,7 +65,7 @@ public class SettingsActivity extends Activity {
         addRow("ضبط التاريخ الهجري", new Row() {
             public String value() {
                 int a = prefs.hijriAdjust();
-                String label = a == 0 ? "بدون تعديل" : (a > 0 ? "+١ يوم" : "−١ يوم");
+                String label = a == 0 ? "بدون تعديل" : (a > 0 ? "+1 يوم" : "−1 يوم");
                 String preview;
                 try { preview = HijriDate.format(LocalDate.now(PrayerCalculator.KUWAIT), a); } catch (Exception e) { preview = ""; }
                 return label + "  (" + preview + ")";
@@ -108,9 +108,9 @@ public class SettingsActivity extends Activity {
         TextView note = text(11.5f, AdhkarView.IVORY_DIM);
         note.setGravity(Gravity.RIGHT);
         note.setLineSpacing(0, 1.25f);
-        note.setText("• تُحسب مواقيت الصلاة على الجهاز نفسه لمدينة الكويت (٢٩٫٣٨° شمالًا، ٤٧٫٩٨° شرقًا) بتوقيت الكويت، "
+        note.setText("• تُحسب مواقيت الصلاة على الجهاز نفسه لمدينة الكويت (29.38° شمالًا، 47.98° شرقًا) بتوقيت الكويت، "
                 + "ولا تحتاج إلى الإنترنت. الطريقة الافتراضية هي الطريقة الكويتية، وقد طابقت نتائجها الجدول المنشور "
-                + "في الكويت يوم ٣٠ أكتوبر ٢٠٢٦. قد تختلف المواقيت الرسمية لوزارة الأوقاف بدقيقة أحيانًا.\n"
+                + "في الكويت يوم 30 أكتوبر 2026. قد تختلف المواقيت الرسمية لوزارة الأوقاف بدقيقة أحيانًا.\n"
                 + "• التاريخ الهجري محسوب وفق تقويم أم القرى، وليس مصدرًا كويتيًا رسميًا؛ وقد يختلف بيوم عن التاريخ المعلن "
                 + "في الكويت عند بداية الشهر، فاستخدم «ضبط التاريخ الهجري» عند الحاجة.\n"
                 + "• لا يُشغَّل الأذان صوتيًا في هذا الإصدار.");

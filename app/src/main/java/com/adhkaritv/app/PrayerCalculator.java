@@ -32,11 +32,11 @@ public final class PrayerCalculator {
 
     public enum Method {
         /** Kuwait: Fajr 18°, Isha 17.5°. */
-        KUWAIT(18.0, 17.5, 0, "الطريقة الكويتية (الفجر ١٨°، العشاء ١٧٫٥°)"),
+        KUWAIT(18.0, 17.5, 0, "الطريقة الكويتية (الفجر 18°، العشاء 17.5°)"),
         /** Umm al-Qura, Makkah: Fajr 18.5°, Isha 90 minutes after Maghrib (Ramadan 120-minute rule not applied). */
-        UMM_AL_QURA(18.5, 0, 90, "أم القرى (الفجر ١٨٫٥°، العشاء بعد المغرب بـ٩٠ دقيقة)"),
+        UMM_AL_QURA(18.5, 0, 90, "أم القرى (الفجر 18.5°، العشاء بعد المغرب بـ90 دقيقة)"),
         /** Muslim World League: Fajr 18°, Isha 17°. */
-        MWL(18.0, 17.0, 0, "رابطة العالم الإسلامي (الفجر ١٨°، العشاء ١٧°)");
+        MWL(18.0, 17.0, 0, "رابطة العالم الإسلامي (الفجر 18°، العشاء 17°)");
 
         final double fajrAngle;
         final double ishaAngle;

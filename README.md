@@ -157,6 +157,12 @@ and do **not** list third-party screensavers, so it must be selected once over A
 - 30 owner-selected Unsplash photos are bundled inside the APK at build time (`.github/scripts/fetch_photos.py` reads `assets/photos.json`); the app no longer uses the internet at all (INTERNET permission removed).
 - Photos are shown in random order (shuffle bag: each photo once per round, no immediate repeats).
 
+### v2.3
+- Dhikr shown directly on the photo (no box) over a soft dark band; it is confined between the top row and the prayer card and shrinks to fit, so it never covers the clock or branding.
+- Prayer times keep their glass card.
+- Western digits (0-9) everywhere; day and month names stay Arabic.
+- Branding reads أذكاري / ATHKARI / by Sami.
+
 ## 9. Testing checklist
 
 - [ ] App appears in the Apps row with the أذكاري banner; opens with the remote.

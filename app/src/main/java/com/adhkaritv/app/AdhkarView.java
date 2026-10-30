@@ -27,7 +27,7 @@ import java.util.List;
 /**
  * The full-screen Athkari screen, shared by the launcher activity and the screensaver (DreamService).
  *
- * Layout: clock | dates top-left, branding top-right, the dhikr in a frosted-glass card in the centre,
+ * Layout: clock | dates top-left, branding top-right, the dhikr directly on the photo in the centre,
  * and a frosted-glass prayer card at the bottom (next prayer, time remaining, progress, six times).
  * Photos cross-fade underneath; the cards and clock never fade.
  *
@@ -56,7 +56,7 @@ public class AdhkarView extends FrameLayout {
     private boolean hasPhoto;
 
     private final TextView clockText, gregorianText, hijriText;
-    private final GlassCard dhikrCard, prayerCard;
+    private final GlassCard prayerCard;
     private final LinearLayout dhikrContent;
     private final TextView categoryText, dhikrText, countText, sourceText;
     private final TextView cityText, nextLabel, nextName, remainLabel, remainText, hintText;
@@ -167,8 +167,12 @@ public class AdhkarView extends FrameLayout {
         TextView brandEn = label(context, 8.5f, IVORY_DIM, null);
         brandEn.setText("ATHKARI");
         brandEn.setLetterSpacing(0.35f);
+        TextView brandBy = label(context, 8.5f, IVORY_DIM, null);
+        brandBy.setText("by Sami");
+        brandBy.setLetterSpacing(0.08f);
         brandText.addView(brandAr);
         brandText.addView(brandEn, vertical(u(1)));
+        brandText.addView(brandBy, vertical(u(1)));
         ImageView crescent = new ImageView(context);
         crescent.setImageResource(R.drawable.crescent);
         brand.addView(brandText);
@@ -179,30 +183,38 @@ public class AdhkarView extends FrameLayout {
         bp.setMargins(0, u(30), u(48), 0);
         addView(brand, bp);
 
-        // --- centre: dhikr in a glass card ---
-        dhikrCard = new GlassCard(context, u(22), Math.max(1, u(0.8f)), GLASS_TINT);
-        dhikrContent = dhikrCard.content;
-        dhikrContent.setGravity(Gravity.CENTER_HORIZONTAL);
-        dhikrContent.setPadding(u(36), u(22), u(36), u(22));
+        // --- centre: the dhikr, directly on the photo (no box) ---
+        // A soft dark band behind the text keeps it readable on bright photos.
+        View band = new View(context);
+        band.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{0x00000000, 0x4D000000, 0x4D000000, 0x00000000}));
+        LayoutParams bandLp = new LayoutParams(-1, -1);
+        bandLp.setMargins(0, u(84), 0, u(160));
+        addView(band, bandLp);
+        // The text area is fixed between the clock row and the prayer card; long texts shrink to fit inside it.
+        dhikrContent = new LinearLayout(context);
+        dhikrContent.setOrientation(LinearLayout.VERTICAL);
+        dhikrContent.setGravity(Gravity.CENTER);
         categoryText = label(context, 12.5f, GOLD, null);
-        categoryText.setBackground(pill(0x26E2BE6A, 0x66E2BE6A));
+        categoryText.setBackground(pill(0x33000000, 0x80E2BE6A));
         categoryText.setPadding(u(14), u(3), u(14), u(4));
         dhikrText = label(context, 36, IVORY, amiri);
         dhikrText.setLineSpacing(0, 1.15f);
+        dhikrText.setShadowLayer(u(6), 0, u(1.5f), 0xCC000000);
         countText = label(context, 12.5f, GOLD, null);
         sourceText = label(context, 12, IVORY_SOFT, null);
         dhikrContent.addView(categoryText, new LinearLayout.LayoutParams(-2, -2));
-        LinearLayout.LayoutParams dtp = new LinearLayout.LayoutParams(-2, -2);
-        dtp.topMargin = u(14);
+        LinearLayout.LayoutParams dtp = new LinearLayout.LayoutParams(-1, -2);
+        dtp.topMargin = u(12);
         dhikrContent.addView(dhikrText, dtp);
-        dhikrContent.addView(countText, vertical(u(10)));
-        dhikrContent.addView(sourceText, vertical(u(8)));
-        // Centred in the space between the clock row (top) and the prayer card (bottom).
-        LayoutParams dcp = new LayoutParams(-2, -2, Gravity.CENTER);
-        dcp.setMargins(u(110), u(96), u(110), u(172));
-        addView(dhikrCard, dcp);
-        dhikrContent.setMinimumWidth(u(440));
-        dhikrText.setMaxWidth(u(960 - 220 - 72));
+        dhikrContent.addView(countText, vertical(u(8)));
+        dhikrContent.addView(sourceText, vertical(u(6)));
+        LayoutParams dcp = new LayoutParams(-1, -1);
+        dcp.setMargins(u(120), u(104), u(120), u(176));
+        addView(dhikrContent, dcp);
+        dhikrContent.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
+            if (b - t != ob - ot || r - l != or - ol) v.post(this::applyDhikrSize);
+        });
 
         // --- bottom: prayer card ---
         prayerCard = new GlassCard(context, u(18), Math.max(1, u(0.8f)), GLASS_TINT);
@@ -304,7 +316,6 @@ public class AdhkarView extends FrameLayout {
         stop();
         photos.close();
         for (ImageView iv : photoViews) iv.setImageDrawable(null);
-        dhikrCard.clear();
         prayerCard.clear();
     }
 
@@ -426,7 +437,7 @@ public class AdhkarView extends FrameLayout {
             item = general.get(adhkarIndex % general.size());
         }
         if (!animate) { bind(item, period); return; }
-        // Only the text fades; the glass card itself stays in place.
+        // The text fades out and back in; the clock and prayer card never fade.
         dhikrContent.animate().alpha(0f).setDuration(700).withEndAction(() -> {
             bind(item, period);
             dhikrContent.animate().alpha(1f).setDuration(900).start();
@@ -440,22 +451,45 @@ public class AdhkarView extends FrameLayout {
         }
         categoryText.setText(heading);
         dhikrText.setText(item.text);
-        applyDhikrSize();
         countText.setText(item.count);
         countText.setVisibility(item.count.isEmpty() ? GONE : VISIBLE);
         sourceText.setText(item.source);
+        applyDhikrSize();
     }
 
-    /** Long texts get a smaller size so they always fit the centre card. */
+    /**
+     * Largest text size (up to the chosen font size) at which the whole dhikr fits the centre area.
+     * Measured with the real font, so long texts like Ayat al-Kursi shrink instead of overlapping anything.
+     */
     private void applyDhikrSize() {
-        CharSequence t = dhikrText.getText();
-        int letters = 0;
-        for (int i = 0; i < t.length(); i++) {
-            char c = t.charAt(i);
-            if (!(c >= 'ً' && c <= 'ٟ') && c != 'ٰ' && c != ' ') letters++; // ignore diacritics
+        float max = u(Prefs.FONT_SP[clampFont(prefs.fontIndex())]);
+        int width = dhikrContent.getWidth() - dhikrContent.getPaddingLeft() - dhikrContent.getPaddingRight();
+        int height = dhikrContent.getHeight();
+        if (width <= 0 || height <= 0) { dhikrText.setTextSize(TypedValue.COMPLEX_UNIT_PX, max * 0.7f); return; }
+        int others = 0;
+        for (int i = 0; i < dhikrContent.getChildCount(); i++) {
+            View c = dhikrContent.getChildAt(i);
+            if (c == dhikrText || c.getVisibility() == GONE) continue;
+            c.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
+            LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) c.getLayoutParams();
+            others += c.getMeasuredHeight() + lp.topMargin + lp.bottomMargin;
         }
-        float f = letters <= 45 ? 1f : letters <= 90 ? 0.86f : letters <= 160 ? 0.72f : letters <= 260 ? 0.6f : 0.5f;
-        dhikrText.setTextSize(TypedValue.COMPLEX_UNIT_PX, u(Prefs.FONT_SP[clampFont(prefs.fontIndex())] * f));
+        int avail = height - others - ((LinearLayout.LayoutParams) dhikrText.getLayoutParams()).topMargin - u(6);
+        CharSequence text = dhikrText.getText();
+        android.text.TextPaint paint = new android.text.TextPaint(dhikrText.getPaint());
+        float size = max, min = u(14);
+        while (size > min) {
+            paint.setTextSize(size);
+            android.text.StaticLayout layout = android.text.StaticLayout.Builder
+                    .obtain(text, 0, text.length(), paint, width)
+                    .setAlignment(android.text.Layout.Alignment.ALIGN_CENTER)
+                    .setLineSpacing(0, 1.15f)
+                    .setTextDirection(android.text.TextDirectionHeuristics.RTL)
+                    .build();
+            if (layout.getHeight() <= avail) break;
+            size -= Math.max(1f, unit);
+        }
+        dhikrText.setTextSize(TypedValue.COMPLEX_UNIT_PX, size);
     }
 
     // ---------- photos ----------
@@ -483,10 +517,7 @@ public class AdhkarView extends FrameLayout {
         }
         frontPhoto = 1 - frontPhoto;
         hasPhoto = true;
-        if (blurred != null) {
-            dhikrCard.setBackdrop(blurred);
-            prayerCard.setBackdrop(blurred);
-        }
+        if (blurred != null) prayerCard.setBackdrop(blurred);
     }
 
     // ---------- helpers ----------
