@@ -2,97 +2,489 @@ package com.adhkaritv.app;
 
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.RelativeSizeSpan;
+import android.util.DisplayMetrics;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.Calendar;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
+import java.time.LocalDate;
+import java.time.ZonedDateTime;
+import java.util.List;
+
+/**
+ * The full-screen Athkari screen, shared by the launcher activity and the screensaver (DreamService).
+ *
+ * Layout (positions are physical, as specified): clock + dates top-left, branding top-right,
+ * dhikr in the centre, prayer-time panel along the bottom. Photos cross-fade underneath;
+ * the overlay is never hidden during transitions.
+ *
+ * Lifecycle: call {@link #start()} when visible, {@link #stop()} when hidden, {@link #destroy()} at the end.
+ */
 public class AdhkarView extends FrameLayout {
-    private final Handler handler = new Handler(Looper.getMainLooper());
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
-    private final ImageView background;
-    private final TextView dhikrText, sourceText, categoryText;
-    private int index = 0;
-    private boolean stopped = false;
-    private final Runnable next = new Runnable() { @Override public void run() { showNext(); } };
 
-    // Photographic images hosted by Unsplash. Network access is required to load these.
-    // Photographers and individual image licenses should be reviewed before redistributing a bundled photo collection.
-    private static final String[] PHOTOS = {
-        "https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=1920&q=85",
-        "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=1920&q=85",
-        "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1920&q=85",
-        "https://images.unsplash.com/photo-1500534623283-312aade485b7?w=1920&q=85",
-        "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1920&q=85",
-        "https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?w=1920&q=85"
+    static final int IVORY = 0xFFF6F0E3;
+    static final int IVORY_SOFT = 0xCCF6F0E3;
+    static final int IVORY_DIM = 0x99F6F0E3;
+    static final int GOLD = 0xFFE2BE6A;
+    static final int NIGHT_TOP = 0xFF0B1830;
+    static final int NIGHT_BOTTOM = 0xFF16304F;
+    private static final int SHADOW = 0xB3000000;
+
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private final Prefs prefs;
+    private final AdhkarRepository repo;
+    private final PhotoManager photos;
+    private final float unit; // 1 unit = 1/960 of the screen width
+    private final Typeface amiri;
+
+    private final ImageView[] photoViews = new ImageView[2];
+    private int frontPhoto = 0;
+    private boolean hasPhoto;
+
+    private final TextView clockText, gregorianText, hijriText;
+    private final TextView categoryText, dhikrText, countText, sourceText;
+    private final LinearLayout centerColumn;
+    private final TextView countdownText, panelLabel, hintText;
+    private final TextView[] nameCells = new TextView[6], timeCells = new TextView[6];
+    private final LinearLayout[] cells = new LinearLayout[6];
+
+    private boolean running;
+    private int adhkarIndex = -1;
+    private String lastPeriod = "";
+    private String lastClock = "", lastDateKey = "";
+    private LocalDate lastPanelDate;
+    private int lastHighlight = -2;
+    private PrayerCalculator.Method method;
+
+    private final Runnable tick = new Runnable() {
+        @Override public void run() {
+            if (!running) return;
+            updateClockAndPrayers();
+            long now = System.currentTimeMillis();
+            handler.postDelayed(this, 1000 - (now % 1000) + 15); // align to the next wall-clock second
+        }
     };
-    // Short Quranic remembrance texts. References refer to the Quran, not fabricated hadith attributions.
-    private static final String[][] ADHKAR = {
-        {"سُبْحَانَ اللَّهِ وَبِحَمْدِهِ", "ذكر عام، صحيح البخاري 6405"},
-        {"لَا إِلَٰهَ إِلَّا أَنْتَ سُبْحَانَكَ إِنِّي كُنْتُ مِنَ الظَّالِمِينَ", "سورة الأنبياء، الآية 87"},
-        {"رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ", "سورة البقرة، الآية 201"},
-        {"رَبِّ زِدْنِي عِلْمًا", "سورة طه، الآية 114"},
-        {"حَسْبُنَا اللَّهُ وَنِعْمَ الْوَكِيلُ", "سورة آل عمران، الآية 173"},
-        {"رَبِّ اشْرَحْ لِي صَدْرِي وَيَسِّرْ لِي أَمْرِي", "سورة طه، الآيتان 25 و26"},
-        {"رَبَّنَا لَا تُزِغْ قُلُوبَنَا بَعْدَ إِذْ هَدَيْتَنَا وَهَبْ لَنَا مِنْ لَدُنْكَ رَحْمَةً إِنَّكَ أَنْتَ الْوَهَّابُ", "سورة آل عمران، الآية 8"},
-        {"وَقُلْ رَبِّ اغْفِرْ وَارْحَمْ وَأَنْتَ خَيْرُ الرَّاحِمِينَ", "سورة المؤمنون، الآية 118"}
+    private final Runnable nextDhikr = new Runnable() {
+        @Override public void run() {
+            if (!running) return;
+            showNextDhikr(true);
+            handler.postDelayed(this, prefs.adhkarSeconds() * 1000L);
+        }
+    };
+    private final Runnable nextPhoto = new Runnable() {
+        @Override public void run() {
+            if (!running) return;
+            photos.next(AdhkarView.this::crossFadeTo);
+            handler.postDelayed(this, prefs.photoSeconds() * 1000L);
+        }
     };
 
     public AdhkarView(Context context) {
         super(context);
-        setBackgroundColor(Color.rgb(14,31,33));
-        background = new ImageView(context); background.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        addView(background, new LayoutParams(-1,-1));
-        View scrim = new View(context);
-        scrim.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{0x99071117,0x77071117,0xB8071117}));
-        addView(scrim,new LayoutParams(-1,-1));
-        LinearLayout column = new LinearLayout(context); column.setOrientation(LinearLayout.VERTICAL); column.setGravity(Gravity.CENTER);
-        column.setPadding(dp(70),dp(40),dp(70),dp(45));
-        addView(column,new LayoutParams(-1,-1));
-        categoryText = text(context,21,0xFFECDFC5); categoryText.setLetterSpacing(0.04f);
-        column.addView(categoryText);
-        View gap = new View(context); column.addView(gap,new LinearLayout.LayoutParams(1,dp(30)));
-        dhikrText = text(context,43,Color.WHITE); dhikrText.setTypeface(Typeface.create("serif",Typeface.NORMAL));
-        dhikrText.setLineSpacing(dp(8),1.1f); dhikrText.setMaxLines(5);
-        column.addView(dhikrText,new LinearLayout.LayoutParams(-1,-2));
-        View gap2 = new View(context); column.addView(gap2,new LinearLayout.LayoutParams(1,dp(24)));
-        sourceText = text(context,18,0xFFE5DCCC); column.addView(sourceText);
-        showNext();
+        prefs = new Prefs(context);
+        repo = new AdhkarRepository(context);
+        DisplayMetrics dm = getResources().getDisplayMetrics();
+        int w = Math.max(dm.widthPixels, dm.heightPixels), h = Math.min(dm.widthPixels, dm.heightPixels);
+        unit = w / 960f;
+        photos = new PhotoManager(context, w, h);
+        Typeface tf;
+        try { tf = Typeface.createFromAsset(context.getAssets(), "fonts/Amiri-Regular.ttf"); }
+        catch (Exception e) { tf = Typeface.SERIF; }
+        amiri = tf;
+        setLayoutDirection(LAYOUT_DIRECTION_LTR); // positions below are physical left/right
+
+        // --- background: night-blue fallback, two photo layers, readability gradients ---
+        View base = new View(context);
+        base.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{NIGHT_TOP, NIGHT_BOTTOM}));
+        addView(base, new LayoutParams(-1, -1));
+        for (int i = 0; i < 2; i++) {
+            ImageView iv = new ImageView(context);
+            iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            iv.setAlpha(0f);
+            photoViews[i] = iv;
+            addView(iv, new LayoutParams(-1, -1));
+        }
+        View dim = new View(context);
+        dim.setBackgroundColor(0x1F000000);
+        addView(dim, new LayoutParams(-1, -1));
+        View topShade = new View(context);
+        topShade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{0x99000000, 0x33000000, 0x00000000}));
+        addView(topShade, new LayoutParams(-1, u(190), Gravity.TOP));
+        View midShade = new View(context);
+        midShade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{0x00000000, 0x40000000, 0x00000000}));
+        addView(midShade, new LayoutParams(-1, u(300), Gravity.CENTER_VERTICAL));
+        View bottomShade = new View(context);
+        bottomShade.setBackground(new GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP, new int[]{0xB3000000, 0x4D000000, 0x00000000}));
+        addView(bottomShade, new LayoutParams(-1, u(210), Gravity.BOTTOM));
+
+        // --- top-left: clock and dates ---
+        LinearLayout clockCol = new LinearLayout(context);
+        clockCol.setOrientation(LinearLayout.VERTICAL);
+        clockCol.setGravity(Gravity.LEFT);
+        clockText = label(context, 50, IVORY, null);
+        clockText.setTypeface(Typeface.create("sans-serif-light", Typeface.NORMAL));
+        clockText.setIncludeFontPadding(false);
+        gregorianText = label(context, 16, IVORY_SOFT, null);
+        hijriText = label(context, 16, GOLD, null);
+        clockCol.addView(clockText);
+        clockCol.addView(gregorianText, vertical(u(4)));
+        clockCol.addView(hijriText, vertical(u(2)));
+        for (int i = 0; i < clockCol.getChildCount(); i++) ((TextView) clockCol.getChildAt(i)).setGravity(Gravity.LEFT);
+        LayoutParams clp = new LayoutParams(-2, -2, Gravity.TOP | Gravity.LEFT);
+        clp.setMargins(u(48), u(28), 0, 0);
+        addView(clockCol, clp);
+
+        // --- top-right: branding ---
+        LinearLayout brand = new LinearLayout(context);
+        brand.setOrientation(LinearLayout.HORIZONTAL);
+        brand.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout brandText = new LinearLayout(context);
+        brandText.setOrientation(LinearLayout.VERTICAL);
+        brandText.setGravity(Gravity.RIGHT);
+        TextView brandAr = label(context, 24, GOLD, amiri);
+        brandAr.setText("أذكاري");
+        brandAr.setIncludeFontPadding(false);
+        TextView brandEn = label(context, 8.5f, IVORY_DIM, null);
+        brandEn.setText("ATHKARI");
+        brandEn.setLetterSpacing(0.35f);
+        brandText.addView(brandAr);
+        brandText.addView(brandEn, vertical(u(1)));
+        ImageView crescent = new ImageView(context);
+        crescent.setImageResource(R.drawable.crescent);
+        brand.addView(brandText);
+        LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(u(30), u(30));
+        cp.leftMargin = u(10);
+        brand.addView(crescent, cp);
+        LayoutParams bp = new LayoutParams(-2, -2, Gravity.TOP | Gravity.RIGHT);
+        bp.setMargins(0, u(30), u(48), 0);
+        addView(brand, bp);
+
+        // --- centre: dhikr ---
+        centerColumn = new LinearLayout(context);
+        centerColumn.setOrientation(LinearLayout.VERTICAL);
+        centerColumn.setGravity(Gravity.CENTER);
+        categoryText = label(context, 14, GOLD, null);
+        categoryText.setLetterSpacing(0.06f);
+        View rule = new View(context);
+        rule.setBackgroundColor(0x99E2BE6A);
+        dhikrText = label(context, 36, IVORY, amiri);
+        dhikrText.setLineSpacing(0, 1.18f);
+        countText = label(context, 13, GOLD, null);
+        sourceText = label(context, 12.5f, IVORY_SOFT, null);
+        centerColumn.addView(categoryText);
+        LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(u(46), Math.max(1, u(1)));
+        rp.setMargins(0, u(9), 0, u(12));
+        centerColumn.addView(rule, rp);
+        centerColumn.addView(dhikrText, new LinearLayout.LayoutParams(-1, -2));
+        centerColumn.addView(countText, vertical(u(10)));
+        centerColumn.addView(sourceText, vertical(u(8)));
+        LayoutParams ccp = new LayoutParams(-1, -2, Gravity.CENTER);
+        ccp.setMargins(u(120), u(118), u(120), u(140));
+        addView(centerColumn, ccp);
+
+        // --- bottom: countdown and prayer panel ---
+        LinearLayout bottom = new LinearLayout(context);
+        bottom.setOrientation(LinearLayout.VERTICAL);
+        bottom.setGravity(Gravity.CENTER_HORIZONTAL);
+        countdownText = label(context, 14, IVORY, null);
+        bottom.addView(countdownText, new LinearLayout.LayoutParams(-2, -2));
+
+        LinearLayout panel = new LinearLayout(context);
+        panel.setOrientation(LinearLayout.HORIZONTAL);
+        panel.setLayoutDirection(LAYOUT_DIRECTION_RTL); // الفجر on the right, العشاء on the left
+        panel.setGravity(Gravity.CENTER_VERTICAL);
+        GradientDrawable pbg = new GradientDrawable();
+        pbg.setColor(0x52000000);
+        pbg.setCornerRadius(u(16));
+        pbg.setStroke(Math.max(1, u(0.75f)), 0x40E2BE6A);
+        panel.setBackground(pbg);
+        panel.setPadding(u(14), u(7), u(14), u(7));
+
+        panelLabel = label(context, 10.5f, GOLD, null);
+        LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(-2, -2);
+        plp.setMargins(u(6), 0, u(6), 0);
+        panel.addView(panelLabel, plp);
+        for (int i = 0; i < 6; i++) {
+            panel.addView(separator(context));
+            LinearLayout cell = new LinearLayout(context);
+            cell.setOrientation(LinearLayout.VERTICAL);
+            cell.setGravity(Gravity.CENTER);
+            cell.setPadding(u(13), u(4), u(13), u(4));
+            nameCells[i] = label(context, 11.5f, IVORY_SOFT, null);
+            nameCells[i].setText(PrayerCalculator.NAMES[i]);
+            timeCells[i] = label(context, 16, IVORY, null);
+            cell.addView(nameCells[i]);
+            cell.addView(timeCells[i], vertical(u(1)));
+            cells[i] = cell;
+            panel.addView(cell);
+        }
+        LinearLayout.LayoutParams pnl = new LinearLayout.LayoutParams(-2, -2);
+        pnl.topMargin = u(7);
+        bottom.addView(panel, pnl);
+        LayoutParams blp = new LayoutParams(-2, -2, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+        blp.setMargins(u(48), 0, u(48), u(26));
+        addView(bottom, blp);
+
+        // --- transient hint (launcher mode only) ---
+        hintText = label(context, 11.5f, IVORY_SOFT, null);
+        GradientDrawable hbg = new GradientDrawable();
+        hbg.setColor(0x66000000);
+        hbg.setCornerRadius(u(12));
+        hintText.setBackground(hbg);
+        hintText.setPadding(u(12), u(4), u(12), u(5));
+        hintText.setAlpha(0f);
+        LayoutParams hlp = new LayoutParams(-2, -2, Gravity.TOP | Gravity.CENTER_HORIZONTAL);
+        hlp.topMargin = u(34);
+        addView(hintText, hlp);
     }
-    private TextView text(Context c, float sp, int color) {
-        TextView t = new TextView(c); t.setTextColor(color); t.setTextSize(sp); t.setGravity(Gravity.CENTER); t.setTextDirection(TEXT_DIRECTION_RTL); t.setShadowLayer(3,1,2,Color.BLACK); return t;
+
+    // ---------- lifecycle ----------
+
+    public void start() {
+        if (running) return;
+        running = true;
+        method = prefs.method();
+        dhikrText.setTextSize(TypedValue.COMPLEX_UNIT_PX, u(Prefs.FONT_SP[clampFont(prefs.fontIndex())]));
+        countdownText.setVisibility(prefs.countdown() ? VISIBLE : GONE);
+        lastClock = ""; lastDateKey = ""; lastPanelDate = null; lastHighlight = -2; // force full refresh (settings may have changed)
+        handler.post(tick);
+        if (adhkarIndex < 0) showNextDhikr(false); else applyDhikrSize();
+        handler.postDelayed(nextDhikr, prefs.adhkarSeconds() * 1000L);
+        if (!hasPhoto) handler.post(nextPhoto); else handler.postDelayed(nextPhoto, prefs.photoSeconds() * 1000L);
     }
-    private int dp(float v) { return (int)(v*getResources().getDisplayMetrics().density); }
-    private void showNext() {
-        if(stopped) return;
-        int current=index++;
-        String[] item=ADHKAR[current%ADHKAR.length];
-        int hour=Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
-        categoryText.setText(hour>=4 && hour<12 ? "أَذْكَارٌ وَأَدْعِيَةٌ • صَبَاحًا" : hour>=17 ? "أَذْكَارٌ وَأَدْعِيَةٌ • مَسَاءً" : "أَذْكَارٌ وَأَدْعِيَةٌ");
-        dhikrText.setText(item[0]); sourceText.setText(item[1]);
-        final String url=PHOTOS[current%PHOTOS.length];
-        executor.execute(()->{
-            Bitmap bitmap=null; HttpURLConnection conn=null;
-            try { conn=(HttpURLConnection)new URL(url).openConnection(); conn.setConnectTimeout(7000); conn.setReadTimeout(9000); conn.setInstanceFollowRedirects(true); conn.connect();
-                if(conn.getResponseCode()==200) bitmap=BitmapFactory.decodeStream(conn.getInputStream());
-            } catch(Exception ignored) {} finally { if(conn!=null) conn.disconnect(); }
-            final Bitmap result=bitmap;
-            handler.post(()->{ if(!stopped && result!=null) { background.setAlpha(0f); background.setImageBitmap(result); background.animate().alpha(1f).setDuration(1800).start(); } });
-        });
-        handler.removeCallbacks(next); handler.postDelayed(next,30000);
+
+    public void stop() {
+        running = false;
+        handler.removeCallbacksAndMessages(null);
     }
-    public void stop() { stopped=true; handler.removeCallbacksAndMessages(null); executor.shutdownNow(); }
+
+    public void destroy() {
+        stop();
+        photos.close();
+        for (ImageView iv : photoViews) iv.setImageDrawable(null);
+    }
+
+    public void showHint(String text, long millis) {
+        hintText.setText(text);
+        hintText.animate().alpha(1f).setDuration(600).start();
+        handler.postDelayed(() -> hintText.animate().alpha(0f).setDuration(900).start(), millis);
+    }
+
+    // ---------- clock, dates, prayers ----------
+
+    private void updateClockAndPrayers() {
+        ZonedDateTime now = ZonedDateTime.now(PrayerCalculator.KUWAIT);
+
+        String clock = ArabicFormat.clock12(now) + " " + ArabicFormat.dayPeriod(now);
+        if (!clock.equals(lastClock)) {
+            lastClock = clock;
+            SpannableStringBuilder sb = new SpannableStringBuilder(ArabicFormat.clock12(now));
+            int s = sb.length();
+            sb.append("  ").append(ArabicFormat.dayPeriod(now));
+            sb.setSpan(new RelativeSizeSpan(0.42f), s, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            sb.setSpan(new ForegroundColorSpan(IVORY_SOFT), s, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            clockText.setText(sb);
+        }
+
+        // A TV whose clock was never set reports a date years in the past; don't show times as if verified.
+        if (now.getYear() < 2025) {
+            String key = "invalid";
+            if (!key.equals(lastDateKey)) {
+                lastDateKey = key;
+                gregorianText.setText("تعذّر التحقق من تاريخ الجهاز");
+                hijriText.setText("يُرجى ضبط الوقت والتاريخ من إعدادات التلفاز");
+                for (TextView t : timeCells) t.setText("—");
+                lastPanelDate = null; // force the times back in once the clock is valid
+                panelLabel.setText("المواقيت\nغير متاحة");
+                lastHighlight = -2; highlight(-1);
+                countdownText.setText("تعذّر التحقق من مواقيت الصلاة لأن ساعة الجهاز غير مضبوطة");
+            }
+            return;
+        }
+
+        String dateKey = now.toLocalDate() + "|" + prefs.hijriAdjust();
+        if (!dateKey.equals(lastDateKey)) {
+            lastDateKey = dateKey;
+            gregorianText.setText(ArabicFormat.gregorianDate(now));
+            String hijri;
+            try { hijri = HijriDate.format(now.toLocalDate(), prefs.hijriAdjust()); }
+            catch (Exception e) { hijri = ""; }
+            hijriText.setText(hijri);
+        }
+
+        PrayerCalculator.Next next = PrayerCalculator.next(now, method);
+        LocalDate panelDate = next.tomorrow ? now.toLocalDate().plusDays(1) : now.toLocalDate();
+        if (!panelDate.equals(lastPanelDate)) {
+            lastPanelDate = panelDate;
+            PrayerCalculator.Day day = PrayerCalculator.compute(panelDate, method);
+            for (int i = 0; i < 6; i++) timeCells[i].setText(ArabicFormat.shortTime(day.times[i]));
+            panelLabel.setText(next.tomorrow ? "مواقيت\nالغد" : "مواقيت\nاليوم");
+        }
+        if (next.prayer != lastHighlight) { lastHighlight = next.prayer; highlight(next.prayer); }
+
+        if (countdownText.getVisibility() == VISIBLE) {
+            String name = PrayerCalculator.NAMES[next.prayer];
+            SpannableStringBuilder sb = new SpannableStringBuilder("الصلاة القادمة: ");
+            int a = sb.length();
+            sb.append(name).append(next.tomorrow ? " (غدًا)" : "");
+            sb.setSpan(new ForegroundColorSpan(GOLD), a, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            sb.append("     ·     متبقي على أذان ").append(name).append(": ");
+            int b = sb.length();
+            sb.append(ArabicFormat.countdown(next.secondsRemaining(now)));
+            sb.setSpan(new ForegroundColorSpan(GOLD), b, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            countdownText.setText(sb);
+        }
+
+        // Switch the adhkar pool promptly when the morning/evening window changes.
+        String period = periodFor(now);
+        if (!period.equals(lastPeriod) && !lastPeriod.isEmpty()) { lastPeriod = period; adhkarIndex = -1; }
+        lastPeriod = period;
+    }
+
+    private void highlight(int prayer) {
+        for (int i = 0; i < 6; i++) {
+            boolean on = i == prayer;
+            nameCells[i].setTextColor(on ? GOLD : IVORY_SOFT);
+            timeCells[i].setTextColor(on ? GOLD : IVORY);
+            if (on) {
+                GradientDrawable g = new GradientDrawable();
+                g.setColor(0x26E2BE6A);
+                g.setCornerRadius(u(10));
+                cells[i].setBackground(g);
+            } else {
+                cells[i].setBackground(null);
+            }
+        }
+    }
+
+    /** Morning adhkar from Fajr until Dhuhr; evening adhkar from Asr until midnight (Kuwait time). */
+    private String periodFor(ZonedDateTime now) {
+        PrayerCalculator.Day d = PrayerCalculator.compute(now.toLocalDate(), method);
+        if (!now.isBefore(d.times[PrayerCalculator.FAJR]) && now.isBefore(d.times[PrayerCalculator.DHUHR])) return AdhkarRepository.MORNING;
+        if (!now.isBefore(d.times[PrayerCalculator.ASR])) return AdhkarRepository.EVENING;
+        return AdhkarRepository.ANY;
+    }
+
+    // ---------- adhkar ----------
+
+    /**
+     * Rotation: inside the morning (Fajr→Dhuhr) or evening (Asr→midnight) window, period-specific adhkar
+     * alternate with general ones; otherwise only general adhkar are shown.
+     */
+    private void showNextDhikr(boolean animate) {
+        final String period = lastPeriod.isEmpty() ? periodFor(ZonedDateTime.now(PrayerCalculator.KUWAIT)) : lastPeriod;
+        List<AdhkarRepository.Item> specific = repo.specific(period);
+        List<AdhkarRepository.Item> general = repo.general();
+        adhkarIndex++;
+        final AdhkarRepository.Item item;
+        if (!specific.isEmpty() && adhkarIndex % 2 == 0) {
+            item = specific.get((adhkarIndex / 2) % specific.size());
+        } else if (!specific.isEmpty()) {
+            item = general.get((adhkarIndex / 2) % general.size());
+        } else {
+            item = general.get(adhkarIndex % general.size());
+        }
+        if (!animate) { bind(item, period); return; }
+        centerColumn.animate().alpha(0f).setDuration(700).withEndAction(() -> {
+            bind(item, period);
+            centerColumn.animate().alpha(1f).setDuration(900).start();
+        }).start();
+    }
+
+    private void bind(AdhkarRepository.Item item, String period) {
+        String heading = item.category;
+        if (AdhkarRepository.BOTH.equals(item.time)) {
+            heading = AdhkarRepository.EVENING.equals(period) ? "أذكار المساء" : "أذكار الصباح";
+        }
+        categoryText.setText(heading);
+        dhikrText.setText(item.text);
+        applyDhikrSize();
+        countText.setText(item.count);
+        countText.setVisibility(item.count.isEmpty() ? GONE : VISIBLE);
+        sourceText.setText(item.source);
+    }
+
+    /** Long texts get a smaller size so they always fit the centre area. */
+    private void applyDhikrSize() {
+        CharSequence t = dhikrText.getText();
+        int letters = 0;
+        for (int i = 0; i < t.length(); i++) {
+            char c = t.charAt(i);
+            if (!(c >= 'ً' && c <= 'ٟ') && c != 'ٰ' && c != ' ') letters++; // ignore diacritics
+        }
+        float f = letters <= 45 ? 1f : letters <= 90 ? 0.86f : letters <= 160 ? 0.72f : letters <= 260 ? 0.6f : 0.5f;
+        dhikrText.setTextSize(TypedValue.COMPLEX_UNIT_PX, u(Prefs.FONT_SP[clampFont(prefs.fontIndex())] * f));
+    }
+
+    // ---------- photos ----------
+
+    private void crossFadeTo(Bitmap bmp) {
+        if (!running && hasPhoto) return;
+        // The two photo layers keep a fixed z-order (below every text layer). Whichever one is on top does
+        // the fading, so the old photo stays fully visible underneath until the new one covers it: no black frame.
+        final ImageView incoming = photoViews[1 - frontPhoto];
+        final ImageView outgoing = photoViews[frontPhoto];
+        incoming.animate().cancel();
+        outgoing.animate().cancel();
+        incoming.setImageBitmap(bmp);
+        boolean incomingOnTop = indexOfChild(incoming) > indexOfChild(outgoing);
+        if (!hasPhoto || incomingOnTop) {
+            incoming.setAlpha(0f);
+            outgoing.setAlpha(hasPhoto ? 1f : 0f);
+            incoming.animate().alpha(1f).setDuration(2000).withEndAction(() -> {
+                outgoing.setAlpha(0f);
+                outgoing.setImageDrawable(null); // release the old bitmap
+            }).start();
+        } else {
+            incoming.setAlpha(1f); // sits under the current photo
+            outgoing.animate().alpha(0f).setDuration(2000).withEndAction(() -> outgoing.setImageDrawable(null)).start();
+        }
+        frontPhoto = 1 - frontPhoto;
+        hasPhoto = true;
+    }
+
+    // ---------- helpers ----------
+
+    private int u(float v) { return Math.round(v * unit); }
+
+    private static int clampFont(int i) { return Math.max(0, Math.min(Prefs.FONT_SP.length - 1, i)); }
+
+    private TextView label(Context c, float size, int color, Typeface tf) {
+        TextView t = new TextView(c);
+        t.setTextColor(color);
+        t.setTextSize(TypedValue.COMPLEX_UNIT_PX, size * unit);
+        t.setGravity(Gravity.CENTER);
+        t.setTextDirection(TEXT_DIRECTION_RTL);
+        t.setShadowLayer(u(4), 0, u(1), SHADOW);
+        if (tf != null) t.setTypeface(tf);
+        return t;
+    }
+
+    private LinearLayout.LayoutParams vertical(int topMargin) {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
+        lp.topMargin = topMargin;
+        return lp;
+    }
+
+    private View separator(Context c) {
+        View v = new View(c);
+        v.setBackgroundColor(0x33F6F0E3);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(Math.max(1, u(0.75f)), u(24));
+        lp.setMargins(u(2), 0, u(2), 0);
+        v.setLayoutParams(lp);
+        return v;
+    }
 }

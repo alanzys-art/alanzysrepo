@@ -1,1 +1,4 @@
-<resources><string name="app_name">أذكاري TV</string></resources>
+<resources>
+    <!-- Launcher name. English name of the app: Athkari. -->
+    <string name="app_name">أذكاري</string>
+</resources>

@@ -1,0 +1,11 @@
+{
+  "_about": "Landscape camera photographs (Unsplash, free under the Unsplash License). The app adds the size/quality parameters itself for images.unsplash.com links. To add photos: append {\"url\": \"https://images.unsplash.com/photo-...\"} entries copied from an Unsplash photo's image address. Only real photographs; no AI art.",
+  "photos": [
+    {"url": "https://images.unsplash.com/photo-1501785888041-af3ef285b470"},
+    {"url": "https://images.unsplash.com/photo-1470770841072-f978cf4d019e"},
+    {"url": "https://images.unsplash.com/photo-1441974231531-c6227db76b6e"},
+    {"url": "https://images.unsplash.com/photo-1500534623283-312aade485b7"},
+    {"url": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b"},
+    {"url": "https://images.unsplash.com/photo-1470252649378-9c29740c9fa8"}
+  ]
+}

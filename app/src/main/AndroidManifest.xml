@@ -1,13 +1,50 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Android TV: no touchscreen required; leanback optional so the APK also installs on other devices. -->
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <uses-feature android:name="android.software.leanback" android:required="false" />
-    <application android:label="أذكاري TV" android:theme="@android:style/Theme.Material.NoActionBar" android:usesCleartextTraffic="false" android:banner="@drawable/banner" android:allowBackup="false">
-        <activity android:name=".MainActivity" android:exported="true" android:screenOrientation="landscape">
-            <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LEANBACK_LAUNCHER"/></intent-filter>
-            <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
+
+    <application
+        android:label="@string/app_name"
+        android:icon="@mipmap/ic_launcher"
+        android:banner="@drawable/banner"
+        android:theme="@style/AthkariTheme"
+        android:supportsRtl="true"
+        android:usesCleartextTraffic="false"
+        android:allowBackup="false">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:screenOrientation="landscape"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|uiMode|density|locale|layoutDirection">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
         </activity>
-        <service android:name=".AdhkarDreamService" android:exported="true" android:permission="android.permission.BIND_DREAM_SERVICE" android:label="أذكاري TV">
-            <intent-filter><action android:name="android.service.dreams.DreamService" /></intent-filter>
+
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="false"
+            android:label="الإعدادات"
+            android:screenOrientation="landscape" />
+
+        <service
+            android:name=".AdhkarDreamService"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_DREAM_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.dreams.DreamService" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </service>
     </application>
 </manifest>

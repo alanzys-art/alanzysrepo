@@ -1,0 +1,8 @@
+<resources>
+    <!-- Night-blue window background so there is never a white or black flash at launch. -->
+    <style name="AthkariTheme" parent="@android:style/Theme.Material.NoActionBar.Fullscreen">
+        <item name="android:windowBackground">@drawable/window_bg</item>
+        <item name="android:colorAccent">#E2BE6A</item>
+        <item name="android:windowAnimationStyle">@android:style/Animation.Activity</item>
+    </style>
+</resources>

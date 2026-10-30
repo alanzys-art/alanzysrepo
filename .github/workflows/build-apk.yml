@@ -1,5 +1,5 @@
 
-name: Build Adhkari TV APK
+name: Build Athkari APK
 
 on:
   workflow_dispatch:
@@ -33,6 +33,22 @@ jobs:
           yes | "$SDKMANAGER" --licenses >/dev/null || true
           "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
 
+      # Optional: sign every build with the same key so new APKs install over old ones.
+      # If the repository secret ATHKARI_DEBUG_KEYSTORE is not set, this step does nothing and
+      # Gradle uses a fresh random debug key (as before).
+      - name: Use stable signing key (optional)
+        shell: bash
+        env:
+          KEYSTORE_B64: ${{ secrets.ATHKARI_DEBUG_KEYSTORE }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            mkdir -p "$HOME/.android"
+            echo "$KEYSTORE_B64" | base64 -d > "$HOME/.android/debug.keystore"
+            echo "Stable signing key installed."
+          else
+            echo "No ATHKARI_DEBUG_KEYSTORE secret; using a temporary debug key."
+          fi
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -44,6 +60,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: AdhkariTV-APK
+          name: Athkari-APK
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
