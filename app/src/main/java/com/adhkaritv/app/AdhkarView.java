@@ -131,7 +131,7 @@ public class AdhkarView extends FrameLayout {
         clockRow.setOrientation(LinearLayout.HORIZONTAL);
         clockRow.setGravity(Gravity.CENTER_VERTICAL);
         clockText = label(context, 46, IVORY, null);
-        clockText.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        clockText.setTypeface(Typeface.create("sans-serif-condensed", Typeface.NORMAL)); // narrower digits
         clockText.setIncludeFontPadding(false);
         clockRow.addView(clockText);
         View divider = new View(context);
@@ -163,16 +163,25 @@ public class AdhkarView extends FrameLayout {
         brandText.setGravity(Gravity.RIGHT);
         TextView brandAr = label(context, 24, GOLD, amiri);
         brandAr.setText("أذكاري");
-        brandAr.setIncludeFontPadding(false);
+        // Amiri's final «ي» sweeps left and below the word; leave room so it is never clipped.
+        brandAr.setIncludeFontPadding(true);
+        brandAr.setPadding(u(14), 0, u(2), u(4));
+        brandAr.setGravity(Gravity.RIGHT);
+        // ATHKARI with «by Sami» centred exactly beneath it.
+        LinearLayout latin = new LinearLayout(context);
+        latin.setOrientation(LinearLayout.VERTICAL);
+        latin.setGravity(Gravity.CENTER_HORIZONTAL);
         TextView brandEn = label(context, 8.5f, IVORY_DIM, null);
         brandEn.setText("ATHKARI");
         brandEn.setLetterSpacing(0.35f);
-        TextView brandBy = label(context, 8.5f, IVORY_DIM, null);
+        brandEn.setTextDirection(TEXT_DIRECTION_LTR);
+        TextView brandBy = label(context, 8, IVORY_DIM, null);
         brandBy.setText("by Sami");
-        brandBy.setLetterSpacing(0.08f);
+        brandBy.setTextDirection(TEXT_DIRECTION_LTR);
+        latin.addView(brandEn, new LinearLayout.LayoutParams(-2, -2));
+        latin.addView(brandBy, new LinearLayout.LayoutParams(-2, -2));
         brandText.addView(brandAr);
-        brandText.addView(brandEn, vertical(u(1)));
-        brandText.addView(brandBy, vertical(u(1)));
+        brandText.addView(latin, vertical(0));
         ImageView crescent = new ImageView(context);
         crescent.setImageResource(R.drawable.crescent);
         brand.addView(brandText);
