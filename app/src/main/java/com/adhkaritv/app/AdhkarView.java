@@ -154,42 +154,15 @@ public class AdhkarView extends FrameLayout {
         clp.setMargins(u(48), u(28), 0, 0);
         addView(clockRow, clp);
 
-        // --- top-right: branding ---
-        LinearLayout brand = new LinearLayout(context);
-        brand.setOrientation(LinearLayout.HORIZONTAL);
-        brand.setGravity(Gravity.CENTER_VERTICAL);
-        LinearLayout brandText = new LinearLayout(context);
-        brandText.setOrientation(LinearLayout.VERTICAL);
-        brandText.setGravity(Gravity.RIGHT);
-        TextView brandAr = label(context, 24, GOLD, amiri);
-        brandAr.setText("أذكاري");
-        // Amiri's final «ي» sweeps left and below the word; leave room so it is never clipped.
-        brandAr.setIncludeFontPadding(true);
-        brandAr.setPadding(u(14), 0, u(2), u(4));
-        brandAr.setGravity(Gravity.RIGHT);
-        // ATHKARI with «by Sami» centred exactly beneath it.
-        LinearLayout latin = new LinearLayout(context);
-        latin.setOrientation(LinearLayout.VERTICAL);
-        latin.setGravity(Gravity.CENTER_HORIZONTAL);
-        TextView brandEn = label(context, 8.5f, IVORY_DIM, null);
-        brandEn.setText("ATHKARI");
-        brandEn.setLetterSpacing(0.35f);
-        brandEn.setTextDirection(TEXT_DIRECTION_LTR);
-        TextView brandBy = label(context, 8, IVORY_DIM, null);
-        brandBy.setText("by Sami");
-        brandBy.setTextDirection(TEXT_DIRECTION_LTR);
-        latin.addView(brandEn, new LinearLayout.LayoutParams(-2, -2));
-        latin.addView(brandBy, new LinearLayout.LayoutParams(-2, -2));
-        brandText.addView(brandAr);
-        brandText.addView(latin, vertical(0));
-        ImageView crescent = new ImageView(context);
-        crescent.setImageResource(R.drawable.crescent);
-        brand.addView(brandText);
-        LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(u(30), u(30));
-        cp.leftMargin = u(10);
-        brand.addView(crescent, cp);
-        LayoutParams bp = new LayoutParams(-2, -2, Gravity.TOP | Gravity.RIGHT);
-        bp.setMargins(0, u(30), u(48), 0);
+        // --- top-right: branding (أذكاري / ATHKARI / by Sami in light gold) ---
+        // Drawn as one pre-rendered image: Android measures Amiri's joined letters too narrowly and would
+        // clip the end of the word, so the brand is not laid out as live text.
+        ImageView brand = new ImageView(context);
+        brand.setImageResource(R.drawable.brand);
+        brand.setAdjustViewBounds(true);
+        brand.setScaleType(ImageView.ScaleType.FIT_END);
+        LayoutParams bp = new LayoutParams(-2, u(74), Gravity.TOP | Gravity.RIGHT);
+        bp.setMargins(0, u(22), u(44), 0);
         addView(brand, bp);
 
         // --- centre: the dhikr, directly on the photo (no box) ---

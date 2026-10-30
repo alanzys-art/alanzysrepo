@@ -2,6 +2,6 @@ plugins { id 'com.android.application' }
 android {
     namespace 'com.adhkaritv.app'
     compileSdk 35
-    defaultConfig { applicationId 'com.adhkaritv.app'; minSdk 26; targetSdk 32; versionCode 7; versionName '2.4.0' }
+    defaultConfig { applicationId 'com.adhkaritv.app'; minSdk 26; targetSdk 32; versionCode 8; versionName '2.4.1' }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
 }
