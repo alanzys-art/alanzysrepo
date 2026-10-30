@@ -80,6 +80,17 @@ public class SettingsActivity extends Activity {
             public String value() { return Prefs.FONT_LABELS[Math.max(0, Math.min(2, prefs.fontIndex()))]; }
             public void change(int d) { prefs.setFontIndex(Math.floorMod(prefs.fontIndex() + d, Prefs.FONT_LABELS.length)); }
         });
+        addRow("خط أرقام الساعة", new Row() {
+            public String value() { return Prefs.CLOCK_FONT_LABELS[Math.max(0, Math.min(3, prefs.clockFont()))]; }
+            public void change(int d) { prefs.setClockFont(Math.floorMod(prefs.clockFont() + d, Prefs.CLOCK_FONT_LABELS.length)); }
+        });
+        addRow("شفافية صندوق المواقيت", new Row() {
+            public String value() {
+                int v = prefs.cardOpacity();
+                return v == 100 ? "100% (كامل)" : v == 0 ? "0% (بدون صندوق)" : v + "%";
+            }
+            public void change(int d) { prefs.setCardOpacity(cycle(Prefs.CARD_OPACITY, prefs.cardOpacity(), d)); }
+        });
         addRow("طريقة حساب مواقيت الصلاة", new Row() {
             public String value() { return prefs.method().arabicName; }
             public void change(int d) {

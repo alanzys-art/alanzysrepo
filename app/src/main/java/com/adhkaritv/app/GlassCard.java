@@ -20,18 +20,21 @@ import android.widget.LinearLayout;
 final class GlassCard extends FrameLayout {
 
     final LinearLayout content;
+    private final FrameLayout background; // blurred photo + tint + border, as one layer
     private final ImageView[] layers = new ImageView[2];
     private int front = 0;
     private boolean hasBackdrop;
 
     GlassCard(Context c, final float radius, int strokePx, int tintColor) {
         super(c);
+        background = new FrameLayout(c);
+        addView(background, new LayoutParams(-1, -1));
         for (int i = 0; i < 2; i++) {
             ImageView iv = new ImageView(c);
             iv.setScaleType(ImageView.ScaleType.MATRIX);
             iv.setAlpha(0f);
             layers[i] = iv;
-            addView(iv, new LayoutParams(-1, -1));
+            background.addView(iv, new LayoutParams(-1, -1));
         }
         View tint = new View(c);
         GradientDrawable g = new GradientDrawable();
@@ -39,7 +42,7 @@ final class GlassCard extends FrameLayout {
         g.setCornerRadius(radius);
         g.setStroke(strokePx, 0x4DFFFFFF);
         tint.setBackground(g);
-        addView(tint, new LayoutParams(-1, -1));
+        background.addView(tint, new LayoutParams(-1, -1));
 
         content = new LinearLayout(c);
         content.setOrientation(LinearLayout.VERTICAL);
@@ -59,7 +62,7 @@ final class GlassCard extends FrameLayout {
         outgoing.animate().cancel();
         incoming.setImageBitmap(blurred);
         alignLayer(incoming);
-        if (!hasBackdrop || indexOfChild(incoming) > indexOfChild(outgoing)) {
+        if (!hasBackdrop || background.indexOfChild(incoming) > background.indexOfChild(outgoing)) {
             incoming.setAlpha(0f);
             outgoing.setAlpha(hasBackdrop ? 1f : 0f);
             incoming.animate().alpha(1f).setDuration(2000).withEndAction(() -> {
@@ -72,6 +75,11 @@ final class GlassCard extends FrameLayout {
         }
         front = 1 - front;
         hasBackdrop = true;
+    }
+
+    /** Opacity of the box behind the text (0-100 %). The text itself always stays fully visible. */
+    void setBackgroundOpacity(int percent) {
+        background.setAlpha(Math.max(0, Math.min(100, percent)) / 100f);
     }
 
     void clear() { for (ImageView iv : layers) iv.setImageDrawable(null); }
@@ -100,7 +108,7 @@ final class GlassCard extends FrameLayout {
     /** Same geometry as CENTER_CROP on the full screen, shifted by this card's position. */
     private void alignLayer(ImageView iv) {
         Drawable d = iv.getDrawable();
-        View parent = (View) getParent();
+        View parent = (View) getParent(); // the full-screen view
         if (d == null || parent == null || parent.getWidth() == 0) return;
         float bw = d.getIntrinsicWidth(), bh = d.getIntrinsicHeight();
         if (bw <= 0 || bh <= 0) return;

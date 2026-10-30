@@ -131,7 +131,7 @@ public class AdhkarView extends FrameLayout {
         clockRow.setOrientation(LinearLayout.HORIZONTAL);
         clockRow.setGravity(Gravity.CENTER_VERTICAL);
         clockText = label(context, 46, IVORY, null);
-        clockText.setTypeface(Typeface.create("sans-serif-condensed", Typeface.NORMAL)); // narrower digits
+        clockText.setTypeface(clockTypeface(prefs.clockFont()));
         clockText.setIncludeFontPadding(false);
         clockRow.addView(clockText);
         View divider = new View(context);
@@ -279,6 +279,9 @@ public class AdhkarView extends FrameLayout {
         if (running) return;
         running = true;
         method = prefs.method();
+        clockText.setTypeface(clockTypeface(prefs.clockFont()));
+        clockText.setFontFeatureSettings(prefs.clockFont() == 2 ? "lnum" : null); // Playfair: level (lining) digits
+        prayerCard.setBackgroundOpacity(prefs.cardOpacity());
         boolean countdown = prefs.countdown();
         countdownRow.setVisibility(countdown ? VISIBLE : GONE);
         progressTrack.setVisibility(countdown ? VISIBLE : GONE);
@@ -505,6 +508,27 @@ public class AdhkarView extends FrameLayout {
     // ---------- helpers ----------
 
     private int u(float v) { return Math.round(v * unit); }
+
+    /**
+     * Typeface for the clock's digits (setting «خط أرقام الساعة»). Bundled open-licence fonts (SIL OFL);
+     * the Arabic «ص/م» falls back to the system Arabic font automatically.
+     */
+    private Typeface clockTypeface(int choice) {
+        String file = null, axes = null;
+        switch (choice) {
+            case 0: file = "fonts/InterTight.ttf"; axes = "'wght' 600"; break;
+            case 1: file = "fonts/Outfit.ttf"; axes = "'wght' 500"; break;
+            case 2: file = "fonts/PlayfairDisplay.ttf"; axes = "'wght' 500"; break;
+            default: break;
+        }
+        if (file != null) {
+            try {
+                Typeface t = new Typeface.Builder(getContext().getAssets(), file).setFontVariationSettings(axes).build();
+                if (t != null) return t;
+            } catch (Exception ignored) { }
+        }
+        return Typeface.create("sans-serif-condensed", Typeface.NORMAL);
+    }
 
     private static int clampFont(int i) { return Math.max(0, Math.min(Prefs.FONT_SP.length - 1, i)); }
 

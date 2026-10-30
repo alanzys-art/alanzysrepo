@@ -163,6 +163,11 @@ and do **not** list third-party screensavers, so it must be selected once over A
 - Western digits (0-9) everywhere; day and month names stay Arabic.
 - Branding reads أذكاري / ATHKARI / by Sami.
 
+### v2.5
+- Brand top-right is a pre-rendered image (أذكاري / ATHKARI / by Sami, light gold); on-screen crescent removed.
+- Settings «خط أرقام الساعة»: Inter Tight (default), Outfit, Playfair Display, Roboto Condensed — clock digits only. Fonts bundled under the SIL Open Font License (licence files in assets/fonts).
+- Settings «شفافية صندوق المواقيت»: 100 / 75 / 50 / 25 / 0 % for the prayer box background; text stays fully visible.
+
 ## 9. Testing checklist
 
 - [ ] App appears in the Apps row with the أذكاري banner; opens with the remote.

@@ -10,6 +10,8 @@ public final class Prefs {
     static final int[] HIJRI_ADJUST = {-1, 0, 1};
     static final String[] FONT_LABELS = {"صغير", "متوسط", "كبير"};
     static final float[] FONT_SP = {30f, 36f, 42f};
+    static final String[] CLOCK_FONT_LABELS = {"Inter Tight (افتراضي)", "Outfit", "Playfair Display", "Roboto Condensed"};
+    static final int[] CARD_OPACITY = {100, 75, 50, 25, 0};
 
     private static final String FILE = "athkari_settings";
     private final SharedPreferences p;
@@ -21,6 +23,10 @@ public final class Prefs {
     public int hijriAdjust() { return p.getInt("hijri_adjust", 0); }
     public boolean countdown() { return p.getBoolean("countdown", true); }
     public int fontIndex() { return p.getInt("font_index", 1); }
+    public int clockFont() { return p.getInt("clock_font", 0); }
+    public int cardOpacity() { return p.getInt("card_opacity", 100); }
+    public void setClockFont(int v) { p.edit().putInt("clock_font", v).apply(); }
+    public void setCardOpacity(int v) { p.edit().putInt("card_opacity", v).apply(); }
     public PrayerCalculator.Method method() { return PrayerCalculator.Method.fromName(p.getString("method", "KUWAIT")); }
 
     public void setAdhkarSeconds(int v) { p.edit().putInt("adhkar_seconds", v).apply(); }
