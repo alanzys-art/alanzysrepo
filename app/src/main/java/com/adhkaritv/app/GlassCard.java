@@ -76,6 +76,22 @@ final class GlassCard extends FrameLayout {
 
     void clear() { for (ImageView iv : layers) iv.setImageDrawable(null); }
 
+    /**
+     * The card is exactly the size of its content. The backdrop, tint and border layers are then stretched
+     * to that size. (A plain FrameLayout would let the match-parent layers grow the card to the whole screen.)
+     */
+    @Override protected void onMeasure(int widthSpec, int heightSpec) {
+        measureChild(content, widthSpec, heightSpec);
+        int w = content.getMeasuredWidth(), h = content.getMeasuredHeight();
+        int ew = MeasureSpec.makeMeasureSpec(w, MeasureSpec.EXACTLY);
+        int eh = MeasureSpec.makeMeasureSpec(h, MeasureSpec.EXACTLY);
+        for (int i = 0; i < getChildCount(); i++) {
+            View child = getChildAt(i);
+            if (child != content) child.measure(ew, eh);
+        }
+        setMeasuredDimension(w, h);
+    }
+
     @Override protected void onLayout(boolean changed, int l, int t, int r, int b) {
         super.onLayout(changed, l, t, r, b);
         for (ImageView iv : layers) alignLayer(iv);

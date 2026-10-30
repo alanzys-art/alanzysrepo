@@ -106,18 +106,20 @@ public final class PhotoManager {
     }
 
     /**
-     * Cheap, smooth blur for the glass cards: shrink in steps to ~1/24 size, then enlarge once with
-     * bilinear filtering. The ImageView scales it up further, which keeps it soft.
+     * Soft blur for the glass cards: shrink the photo to 1/10 size, run a true blur on that small image
+     * (three box-blur passes, close to a Gaussian), and let the card enlarge it. Because the small image is
+     * already smooth, the enlargement shows no blocks.
      */
     static Bitmap blur(Bitmap src) {
         try {
-            int w = src.getWidth(), h = src.getHeight();
-            Bitmap a = Bitmap.createScaledBitmap(src, Math.max(1, w / 6), Math.max(1, h / 6), true);
-            Bitmap b = Bitmap.createScaledBitmap(a, Math.max(1, w / 24), Math.max(1, h / 24), true);
-            Bitmap c = Bitmap.createScaledBitmap(b, Math.max(1, w / 8), Math.max(1, h / 8), true);
-            if (a != src) a.recycle();
-            b.recycle();
-            return c;
+            int w = Math.max(8, src.getWidth() / 10), h = Math.max(8, src.getHeight() / 10);
+            Bitmap small = Bitmap.createScaledBitmap(src, w, h, true);
+            int[] px = new int[w * h];
+            small.getPixels(px, 0, w, 0, 0, w, h);
+            BoxBlur.blur(px, w, h, 4, 3);
+            Bitmap out = Bitmap.createBitmap(px, w, h, Bitmap.Config.ARGB_8888);
+            if (small != src) small.recycle();
+            return out;
         } catch (Throwable t) {
             return null;
         }
