@@ -49,6 +49,9 @@ jobs:
             echo "No ATHKARI_DEBUG_KEYSTORE secret; using a temporary debug key."
           fi
 
+      - name: Download background photos into the app
+        run: python3 .github/scripts/fetch_photos.py
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:

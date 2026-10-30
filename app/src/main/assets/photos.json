@@ -1,5 +1,5 @@
 {
-  "_about": "Landscape camera photographs (Unsplash, free under the Unsplash License). The app adds the size/quality parameters itself for images.unsplash.com links. To add photos: append {\"url\": \"https://images.unsplash.com/photo-...\"} entries copied from an Unsplash photo's image address. Only real photographs; no AI art.",
+  "_about": "Background photos bundled INTO the APK at build time (the app needs no internet). The GitHub Actions build downloads each URL below into app/src/main/assets/photos/ before compiling. All are Unsplash photographs under the free Unsplash License. Shown in random order. To change the set: edit this list (copy an Unsplash image address up to the '?'), commit, and install the new APK.",
   "photos": [
     {
       "url": "https://images.unsplash.com/photo-1470770841072-f978cf4d019e"
@@ -57,6 +57,39 @@
     },
     {
       "url": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1454496522488-7a8e488e8606"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1483728642387-6c3bdd6c93e5"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1519681393784-d120267933ba"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1545917992-dea2d782ef46"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1518563077661-23ad56581d77"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1619364726002-dfd4fdaee5f2"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1734834788811-6bf4d5d07370"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1579353761614-267e92471455"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1627224030134-1983edc7da41"
     }
   ]
 }

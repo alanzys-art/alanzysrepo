@@ -153,6 +153,10 @@ and do **not** list third-party screensavers, so it must be selected once over A
 - Clock row: time | divider | Gregorian and Hijri dates.
 - 19 background photos chosen by the owner (`assets/photos.json`).
 
+### v2.2
+- 30 owner-selected Unsplash photos are bundled inside the APK at build time (`.github/scripts/fetch_photos.py` reads `assets/photos.json`); the app no longer uses the internet at all (INTERNET permission removed).
+- Photos are shown in random order (shuffle bag: each photo once per round, no immediate repeats).
+
 ## 9. Testing checklist
 
 - [ ] App appears in the Apps row with the أذكاري banner; opens with the remote.
